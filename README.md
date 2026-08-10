@@ -33,13 +33,22 @@ Registrations concentrate in July (34,255), June (12,512) and August (12,171).
 ## 2. Metric definition
 
 The primary metric is **paying share** — the proportion of users in an arm who complete at
-least one successful payment:
+least one successful payment. For user $i$, let $y_i$ be the payment indicator:
 
-$$\hat{p} = \frac{1}{n}\sum_{i=1}^{n} \mathbb{1}[\text{successful\_payment}_i = 1]$$
+$$y_i = \mathbf{1}\left[\text{user } i \text{ made a successful payment}\right]
+\in \{0, 1\}$$
 
-Chosen over average revenue per user because it is bounded, robust to the heavy right tail
-in `amount`, and directly reflects the conversion behaviour the treatment was intended to
-influence. Revenue is tracked as a secondary metric.
+The arm-level estimate is then the sample mean of that indicator:
+
+$$\hat{p} = \frac{1}{n}\sum_{i=1}^{n} y_i,
+\qquad
+\operatorname{Var}(\hat{p}) = \frac{\hat{p}(1-\hat{p})}{n}$$
+
+In the data this corresponds to the `successful_payment` flag aggregated to user level.
+
+Paying share was chosen over average revenue per user because it is bounded, robust to the
+heavy right tail in `amount`, and directly reflects the conversion behaviour the treatment
+was intended to influence. Revenue is tracked as a secondary metric.
 
 ---
 
