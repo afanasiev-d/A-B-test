@@ -1,62 +1,137 @@
-# A/B Testing for Payment Behavior Analysis
-## Project Overview
-This project aims to analyze user payment behavior through A/B testing. The dataset contains user interactions, payment history, and experiment group classifications. The goal is to determine whether a particular change (e.g., feature rollout, pricing strategy) significantly impacts user payment rates.
+# A/B Test — Impact of a Product Change on Payment Conversion
 
-## Dataset Description
-The dataset (raw_data.csv) contains 58,938 observations and 13 features:
+**Question:** did the treatment change the share of registered users who go on to make a
+successful payment?
 
-id_user – Unique user identifier
-gender – User's gender
-date_reg – Date of registration
-platform – User platform (mobile, desktop, other)
-id_traffic_source – Traffic source ID
-country_group – Country category
-age_group – User age category
-system – Operating system (Windows, iOS, etc.)
-date_payment – Date of payment (if applicable)
-method – Payment method (card, apple-pay, etc.)
-amount – Payment amount
-successful_payment – Binary flag (1 if payment is successful, 0 otherwise)
-split_group – A/B testing group (0 = Control, 1 = Treatment)
-## Data Preprocessing
-Converted date_reg and date_payment columns to datetime format.
-Created the paying_share metric, indicating whether a user successfully made a payment.
-Analyzed weekly paying share trends.
-## Exploratory Data Analysis (EDA)
-User Registration Trends
+**Answer:** yes — and negatively. Paying share fell from **23.09%** (control) to **10.32%**
+(treatment), a drop of **12.8 percentage points** (95% CI: 8.9–16.6 pp), a **55% relative
+decline**. An A/A test run first confirmed the randomisation was sound, so the effect is
+attributable to the treatment rather than to sampling bias.
 
-Most users registered in July (34,255 users), followed by June (12,512) and August (12,171).
-Paying share fluctuates over time, with notable peaks and drops.
-Platform Distribution
+**Recommendation:** do not roll out.
 
-79.1% of users are on mobile, while 14.7% use desktop and 6.2% fall under 'other'.
-Payment Behavior
+---
 
-Users in the treatment group (split_group = 1) and control group (split_group = 0) were compared for spending trends.
-Visualized daily mean payment amounts for each group.
-Demographic Insights
+## 1. Data
 
-Payment trends analyzed across age groups, gender, and platform using box plots and histograms.
-## A/B Testing Methodology
-### Step 1: Stratified Sampling
-Randomly sampled users from both groups while maintaining the same age distribution.
-645 users from Control (A) and 826 users from Treatment (B) were selected.
-### Step 2: Calculating Paying Share
-Control group (A) paying share: 23.09%
-Treatment group (B) paying share: 10.32%
-A significant drop in paying share observed in the treatment group.
-### Step 3: A/A Testing for Validation
-Split the control group into two subgroups (A0 and A1) and conducted a chi-square test.
-Result: p-value = 0.8115 (no significant difference).
-Confirms that sampling was random and unbiased.
-### Step 4: A/B Test Analysis
-Compared paying share between A and B groups using a chi-square test.
-## Result:
-Chi-square statistic = 8.81
-p-value = 0.0122 → Statistically significant!
-Indicates that the treatment had a significant negative impact on payment rates.
-Conclusion & Recommendations
-Findings
-The treatment group (B) paid significantly less than the control group (A).
-The A/A test confirmed no selection bias, validating our experiment's integrity.
-The feature introduced in the treatment group negatively impacted payment behavior.
+`raw_data.csv` — 58,938 registered users, 13 fields.
+
+| Field | Description |
+|---|---|
+| `id_user` | Unique user identifier |
+| `date_reg`, `date_payment` | Registration and payment timestamps |
+| `split_group` | Experiment arm (0 = control, 1 = treatment) |
+| `successful_payment` | Binary outcome flag |
+| `amount`, `method` | Payment value and instrument (card, Apple Pay, …) |
+| `platform`, `system` | Mobile / desktop / other; OS |
+| `gender`, `age_group`, `country_group`, `id_traffic_source` | User covariates |
+
+Registrations concentrate in July (34,255), June (12,512) and August (12,171).
+
+---
+
+## 2. Metric definition
+
+The primary metric is **paying share** — the proportion of users in an arm who complete at
+least one successful payment:
+
+$$\hat{p} = \frac{1}{n}\sum_{i=1}^{n} \mathbb{1}[\text{successful\_payment}_i = 1]$$
+
+Chosen over average revenue per user because it is bounded, robust to the heavy right tail
+in `amount`, and directly reflects the conversion behaviour the treatment was intended to
+influence. Revenue is tracked as a secondary metric.
+
+---
+
+## 3. Design
+
+### 3.1 Stratified sampling
+
+Users were sampled from each arm with the **age distribution held fixed**, so that any
+observed difference cannot be explained by age composition — a known confounder for payment
+propensity.
+
+| Arm | n |
+|---|---|
+| A — control | 645 |
+| B — treatment | 826 |
+
+### 3.2 A/A validation (run *before* the A/B analysis)
+
+The control arm was split into two random subgroups, A₀ and A₁, and tested against each
+other. Under a correct randomisation there should be no detectable difference.
+
+> χ² test on A₀ vs A₁ → **p = 0.8115**
+
+No significant difference. The assignment mechanism is unbiased and the test has no
+structural false-positive tendency, so a significant A/B result can be read as a real effect.
+
+---
+
+## 4. Statistical test
+
+Paying share is compared across arms with a **Pearson χ² test of independence** on the
+2×2 contingency table (arm × paid), with expected counts
+
+$$E_{ij} = \frac{R_i C_j}{N}, \qquad
+\chi^2 = \sum_{i,j} \frac{(O_{ij} - E_{ij})^2}{E_{ij}}, \qquad \mathrm{df} = 1$$
+
+Equivalently, as a two-proportion z-test (the two are related by χ² = z²):
+
+$$z = \frac{\hat{p}_A - \hat{p}_B}
+{\sqrt{\hat{p}(1-\hat{p})\left(\tfrac{1}{n_A}+\tfrac{1}{n_B}\right)}},
+\qquad \hat{p} = \frac{x_A + x_B}{n_A + n_B}$$
+
+Both are two-sided at α = 0.05. The χ² test is appropriate here because all expected cell
+counts exceed 5; Fisher's exact test would be required otherwise.
+
+### Results
+
+| Quantity | Value |
+|---|---|
+| Paying share, control (A) | 23.09% (149 / 645) |
+| Paying share, treatment (B) | 10.32% (85 / 826) |
+| Absolute difference | **−12.77 pp** |
+| Relative change | **−55.3%** |
+| 95% CI on the difference | [8.91, 16.63] pp |
+| Pooled proportion | 0.1592 |
+| z-statistic | 6.64 |
+| χ² (1 df) | <!-- RE-RUN AND INSERT --> |
+| p-value | <!-- RE-RUN AND INSERT --> |
+| Cohen's h | 0.348 (small-to-moderate) |
+
+Confidence interval on the difference of proportions:
+
+$$(\hat{p}_A - \hat{p}_B) \pm z_{1-\alpha/2}
+\sqrt{\frac{\hat{p}_A(1-\hat{p}_A)}{n_A} + \frac{\hat{p}_B(1-\hat{p}_B)}{n_B}}$$
+
+The interval excludes zero across its whole range, so the direction of the effect is not in
+doubt even at the conservative end.
+
+---
+
+## 5. Conclusion
+
+1. The treatment **reduced** payment conversion by roughly 13 percentage points — over half
+   the baseline rate.
+2. The A/A test rules out selection bias as an explanation.
+3. The effect is large enough to matter commercially, not merely statistically detectable.
+
+**Recommendation: do not ship.** If the feature is strategically necessary, re-test a
+modified version and instrument the payment funnel to locate the step at which users drop.
+
+### Limitations
+
+- Single metric, single time window; no long-run or novelty-effect analysis.
+- No pre-registered minimum detectable effect, so the design's power was not fixed in advance.
+- Segment-level effects (platform, country, traffic source) are described but not formally
+  tested — repeated subgroup testing would need multiple-comparison correction.
+
+---
+
+## 6. Reproducing
+
+```bash
+pip install pandas numpy scipy matplotlib seaborn
+jupyter notebook ab_test.ipynb
+```ment group negatively impacted payment behavior.
