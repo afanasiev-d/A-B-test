@@ -15,15 +15,19 @@ unbiased, so the effect is attributable to the redesign.
 ## 1. Target metric
 
 The business outcome is the number of successful payments — a discrete variable following a
-binomial distribution $B(n, p)$. Rather than test raw counts, the analysis uses the
+binomial distribution *B*(*n*, *p*). Rather than test raw counts, the analysis uses the
 normalised proxy **paying share**: the fraction of users in an arm who completed a
 *successful* payment.
 
 For the binomial proportion:
 
-$$\mathbb{E}[\hat{p}] = \frac{np}{n} = p,
-\qquad
-\operatorname{Var}(\hat{p}) = \frac{np(1-p)}{n^{2}} = \frac{p(1-p)}{n}$$
+```math
+\mathbb{E}[\hat{p}] = \frac{np}{n} = p
+```
+
+```math
+\mathrm{Var}(\hat{p}) = \frac{np(1-p)}{n^{2}} = \frac{p(1-p)}{n}
+```
 
 Normalising by arm size makes the two groups comparable when they differ in size, and the
 variance expression above is what the power calculation in §3 is built on.
@@ -59,21 +63,20 @@ the same time window is what removes that alternative explanation.
 
 Sample size was fixed *before* testing, using the standard two-proportion formula:
 
-$$n = \frac{\left[
-z_{1-\alpha/2}\sqrt{\bar{p}(1-\bar{p})\left(1+\tfrac{1}{k}\right)} +
-z_{1-\beta}\sqrt{p_1(1-p_1) + \tfrac{p_2(1-p_2)}{k}}
-\right]^{2}}{\mathrm{MDE}^{2}}$$
+```math
+n = \frac{\left[ z_{1-\alpha/2}\sqrt{\bar{p}(1-\bar{p})\left(1+\frac{1}{k}\right)} + z_{1-\beta}\sqrt{p_1(1-p_1) + \frac{p_2(1-p_2)}{k}} \right]^{2}}{\mathrm{MDE}^{2}}
+```
 
-| Parameter | Value |
-|---|---|
-| $\bar{p}$ — pooled success probability | 0.167 |
-| $p_1$ — control | 0.230 |
-| $p_2$ — treatment | 0.103 |
-| MDE $= \lvert p_1 - p_2 \rvert$ | 0.127 |
-| $z_{1-\alpha/2}$ — significance 95% | 1.96 |
-| $z_{1-\beta}$ — power 80% | 0.84 |
-| $k$ — arm size ratio | 1 (equal arms) |
-| **Required n per arm** | **≈ 134** |
+| Parameter | Meaning | Value |
+|---|---|---|
+| p̄ | pooled success probability | 0.167 |
+| p₁ | control success probability | 0.230 |
+| p₂ | treatment success probability | 0.103 |
+| MDE | minimal detectable effect, \|p₁ − p₂\| | 0.127 |
+| z₁₋α/₂ | z-score at 95% significance | 1.96 |
+| z₁₋β | z-score at 80% power | 0.84 |
+| k | arm size ratio | 1 (equal arms) |
+| **n** | **required sample per arm** | **≈ 134** |
 
 The requirement is small because the effect being detected is large — MDE sits in the
 denominator, and a 12.7 pp gap between arm conversion rates is a substantial difference.
@@ -95,9 +98,9 @@ Sampling was stratified on `age_group` within the post-24-July population. The j
 is variance decomposition — total variance under simple random sampling splits into
 within-stratum and between-stratum components:
 
-$$\operatorname{Var}_{\text{SRS}} =
-\underbrace{\operatorname{Var}_{\text{within}}}_{\text{retained}} +
-\underbrace{\operatorname{Var}_{\text{between}}}_{\text{removed by stratification}}$$
+```math
+\mathrm{Var}_{\text{SRS}} = \underbrace{\mathrm{Var}_{\text{within}}}_{\text{retained}} + \underbrace{\mathrm{Var}_{\text{between}}}_{\text{removed by stratification}}
+```
 
 Removing the between-stratum term shrinks the sampling variance, which lowers the
 probability of Type I and Type II error at a **fixed** sample size — equivalently, it lets
@@ -109,11 +112,13 @@ the same effect be detected with fewer users.
 
 A **Pearson χ² test of independence** on the contingency table of arm × payment outcome:
 
-$$E_{ij} = \frac{R_i C_j}{N},
-\qquad
-\chi^{2} = \sum_{i,j}\frac{(O_{ij}-E_{ij})^{2}}{E_{ij}},
-\qquad
-\mathrm{df} = (r-1)(c-1) = 2$$
+```math
+E_{ij} = \frac{R_i C_j}{N}
+```
+
+```math
+\chi^{2} = \sum_{i,j}\frac{(O_{ij}-E_{ij})^{2}}{E_{ij}}, \qquad \mathrm{df} = (r-1)(c-1) = 2
+```
 
 > **Table layout:** 2 arms × 3 payment-outcome categories, hence 2 degrees of freedom.
 
